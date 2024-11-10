@@ -5,72 +5,67 @@
  */
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
 use Magento\Framework\View\Element\Template;
 use Opengento\Snowflake\ViewModel\Snowflake;
 
 /** @var Template $block */
-/** @var Snowflake $viewModel */
-$viewModel = $block->getData('viewModel');
+/** @var Snowflake $snowflake */
+$snowflake = $block->getData('viewModel');
 ?>
 <div id="snowflake_container"></div>
 
 <script>
-    require([
-        'jquery',
-        'jquery/ui',
-        'domReady!'
-    ], function($) {
-        "use strict";
+    "use strict";
 
-        <?php if ($viewModel->isForceSnow()): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Vérifiez si la neige de saucisses doit commencer
+        if (forceSnow()) {
             letSnow();
-        <?php elseif ($viewModel->isApiEnabled()): ?>
-            let lat, lon, settings = {
-                "url": "<?= $viewModel->getIpLocatorApiUrl() ?>",
-                "method": "GET",
-                "timeout": 0
-            };
-            $.ajax(settings).done(function (response) {
-                [lat, lon] = response.loc.split(',');
-                $.ajax({
-                    url: '<?= $block->getData('meteoUrl') ?>lat/' + lat + '/lon/' + lon,
-                    type: "GET",
-                }).done(function (data) {
+        } else if (isApiEnabled()) {
+            fetch("<?= $snowflake->getIpLocatorApiUrl() ?>")
+                .then(response => response.json())
+                .then(data => {
+                    let [lat, lon] = data.loc.split(',');
+                    return fetch(`<?= $block->getData('meteoUrl') ?>lat/${lat}/lon/${lon}`);
+                })
+                .then(response => response.json())
+                .then(data => {
                     if (data.is_snowing) {
                         letSnow();
                     }
-                });
-            });
-        <?php endif; ?>
+                })
+                .catch(error => console.error('Error:', error));
+        }
 
         function letSnow() {
-            let snowMax = <?= $viewModel->getSnowflakeQty() ?>;
-            let snowColor = ["#DDD", "#BBB", "#AAA", "#EEE", "#CCC"];
-            let snowEntity = "<?= $viewModel->getSnowflakeChar() ?>";
-            let snowVSpeed = <?= $viewModel->getSnowflakeVSpeed() ?>;
-            let snowHSpeed = <?= $viewModel->getSnowflakeHSpeed() ?>;
-            let snowRotSpeed = <?= $viewModel->getSnowflakeRotSpeed() ?>;
-            let snowMinSize = <?= $viewModel->getSnowflakeMinSize() ?>;
-            const snowMaxSize = <?= $viewModel->getSnowflakeMaxSize() ?>;
+            let snowMax = <?= $snowflake->getSnowflakeQty() ?>;
+            let snowEntities = <?= $snowflake->getIconsForSelectedSeason() ?>;
+            let snowVSpeed = <?= $snowflake->getSnowflakeVSpeed() ?>;
+            let snowHSpeed = <?= $snowflake->getSnowflakeHSpeed() ?>;
+            let snowRotSpeed = <?= $snowflake->getSnowflakeRotSpeed() ?>;
+            let snowMinSize = <?= $snowflake->getSnowflakeMinSize() ?>;
+            const snowMaxSize = <?= $snowflake->getSnowflakeMaxSize() ?>;
             const snowRefresh = 50;
-            const snowMaxBlur = 3;
+            const snowMaxBlur = 0;
             const snowStyles = "cursor: default; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -o-user-select: none; user-select: none;";
 
-            let snow = [],
-                pos = [],
-                coords = [],
-                left = [],
-                marginBottom,
-                marginRight;
+            let snow = [];
+            let pos = [];
+            let coords = [];
+            let left = [];
+            let marginBottom;
+            let marginRight;
 
             let newPositions = '';
 
             for (let i = 0; i <= snowMax; i++) {
-                newPositions += ("<span id='flake" + i + "'" +
-                    " style='" + snowStyles + "position:absolute;top:-" + snowMaxSize + "'>"
-                    + snowEntity + "</span>");
+                // Utiliser l'index modulo pour choisir une icône différente à chaque itération
+                let entity = snowEntities[i % snowEntities.length].trim(); // Utilisation de trim() pour éviter les espaces indésirables
+                newPositions += `<span id='flake${i}' style='${snowStyles} position:absolute; top:-${snowMaxSize}px;'>${entity}</span>`;
             }
-            $('#snowflake_container').html(newPositions);
+            document.getElementById('snowflake_container').innerHTML = newPositions;
 
             let snowSize = snowMaxSize - snowMinSize;
             marginBottom = document.body.scrollHeight - 5;
@@ -80,23 +75,22 @@ $viewModel = $block->getData('viewModel');
                 coords[i] = 0;
                 left[i] = Math.random() * 15;
                 pos[i] = 0.03 + Math.random() / 10;
-                snow[i] = document.getElementById("flake" + i);
+                snow[i] = document.getElementById(`flake${i}`);
                 snow[i].style.fontFamily = "inherit";
-                let size = randomise(snowSize) + snowMinSize
+                let size = randomise(snowSize) + snowMinSize;
                 snow[i].size = size;
                 snow[i].speedFactor = snowMaxSize / size / 2;
-                snow[i].style.filter = "blur(" + (snowMaxBlur * ((snowMaxSize - size) / (snowMaxSize - snowMinSize))) / 2 + "px)";
-                snow[i].style.fontSize = snow[i].size + "px";
-                snow[i].style.color = snowColor[randomise(snowColor.length)];
+                snow[i].style.filter = `blur(${(snowMaxBlur * ((snowMaxSize - size) / (snowMaxSize - snowMinSize))) / 2}px)`;
+                snow[i].style.fontSize = `${size}px`;
                 snow[i].style.zIndex = 1000;
                 snow[i].style.textShadow = "1px 1px 5px #0000DD55";
                 snow[i].style.transform = "rotate(0deg)";
-                snow[i].vsink = snowVSpeed * snow[i].size / 5;
-                snow[i].hsink = snowHSpeed * snow[i].size / 5;
-                snow[i].posX = randomise(marginRight - snow[i].size);
-                snow[i].posY = randomise(2 * marginBottom - marginBottom - 2 * snow[i].size);
-                snow[i].style.left = snow[i].posX + "px";
-                snow[i].style.top = snow[i].posY + "px";
+                snow[i].vsink = snowVSpeed * size / 5;
+                snow[i].hsink = snowHSpeed * size / 5;
+                snow[i].posX = randomise(marginRight - size);
+                snow[i].posY = randomise(2 * marginBottom - marginBottom - 2 * size);
+                snow[i].style.left = `${snow[i].posX}px`;
+                snow[i].style.top = `${snow[i].posY}px`;
 
                 snow[i].rotationAngleStep = 0;
                 snow[i].rotationAngActual = 0;
@@ -125,31 +119,38 @@ $viewModel = $block->getData('viewModel');
                     coords[i] += pos[i];
                     snow[i].posY += snow[i].vsink;
                     snow[i].posX += snow[i].hsink * snow[i].speedFactor;
-                    snow[i].style.left = snow[i].posX + left[i] * Math.sin(coords[i]) + "px";
-                    snow[i].style.top = snow[i].posY + "px";
+                    snow[i].style.left = `${snow[i].posX + left[i] * Math.sin(coords[i])}px`;
+                    snow[i].style.top = `${snow[i].posY}px`;
                     snow[i].rotationAngActual += snow[i].rotationAngleStep;
-                    snow[i].style.transform = "rotate(" + snow[i].rotationAngActual + "deg)";
+                    snow[i].style.transform = `rotate(${snow[i].rotationAngActual}deg)`;
 
-                    // if (snowVSpeed > 0 && (snow[i].posY >= marginBottom - 2 * snow[i].size || parseInt(snow[i].style.left) > (marginRight - 3 * left[i]))) {
-                    if (snowVSpeed > 0 && (snow[i].posY >= marginBottom - 2 * snow[i].size)) {
+                    if (snowVSpeed > 0 && snow[i].posY >= marginBottom - 2 * snow[i].size) {
                         snow[i].posX = randomise(marginRight - snow[i].size);
                         snow[i].posY = 0;
                     }
-                    if (snowVSpeed < 0 && (snow[i].posY < 0)) {
-                        snow[i].posY = document.body.scrollHeight - snow[i].size *2;
+                    if (snowVSpeed < 0 && snow[i].posY < 0) {
+                        snow[i].posY = document.body.scrollHeight - snow[i].size * 2;
                     }
-                    if (snowHSpeed > 0 && (snow[i].posX >= marginRight - 2 * snow[i].size)) {
+                    if (snowHSpeed > 0 && snow[i].posX >= marginRight - 2 * snow[i].size) {
                         snow[i].posX = randomise(marginRight - snow[i].size);
                         snow[i].posY = 0;
                     }
-                    if (snowHSpeed < 0 && (snow[i].posX < 0)) {
+                    if (snowHSpeed < 0 && snow[i].posX < 0) {
                         snow[i].posY = document.body.clientWidth - snow[i].size * 2;
                     }
                 }
             }
 
             window.addEventListener('resize', resize);
-            window.setInterval(moveSnow, snowRefresh);
+            setInterval(moveSnow, snowRefresh);
+        }
+
+        function forceSnow() {
+            return <?= $snowflake->isForceSnow() ?>;
+        }
+
+        function isApiEnabled() {
+            return <?= $snowflake->isApiEnabled() ?>;
         }
     });
 </script>

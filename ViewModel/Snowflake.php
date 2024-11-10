@@ -10,24 +10,67 @@ namespace Opengento\Snowflake\ViewModel;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 use Opengento\Snowflake\Model\Config\OpenWeather as OpenWeatherConfig;
 use Opengento\Snowflake\Model\Config\Snowflake as SnowflakeConfig;
+use Magento\Framework\Serialize\SerializerInterface;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Store\Model\ScopeInterface;
 
 final class Snowflake implements ArgumentInterface
 {
-    private SnowflakeConfig $snowflakeConfig;
-
-    private OpenWeatherConfig $openWeatherConfig;
-
     public function __construct(
-        SnowflakeConfig $snowflakeConfig,
-        OpenWeatherConfig $openWeatherConfig
-    ) {
-        $this->snowflakeConfig = $snowflakeConfig;
-        $this->openWeatherConfig = $openWeatherConfig;
+        private SerializerInterface $serializer,
+        private SnowflakeConfig $snowflakeConfig,
+        private OpenWeatherConfig $openWeatherConfig,
+        private ScopeConfigInterface $scopeConfig
+    ) {}
+
+    public function getSeasonalIcons(): array
+    {
+        return [
+            'halloween' => ['🎃', '👻', '🦇'],
+            'noel' => ['❄️', '🎅', '🎄'],
+            'printemps' => ['🌷', '🐣', '☀️'],
+            'ete' => ['🌞', '🏖️', '🍉'],
+            'automne' => ['🍂', '🍁', '🎃'],
+            'fete_nationale' => ['🎆', '🇫🇷', '🥳'],
+            'nouvel_an' => ['🎇', '🎉', '🥂'],
+            'paques' => ['🐰', '🥚', '🐣'],
+            'saint_valentin' => ['💖', '🌹', '💕'],
+            'fete_travail' => ['⚒️', '🌻', '🛠️'],
+            'fete_musique' => ['🎵', '🎸', '🎤'],
+            'hiver' => ['❄️', '☃️', '🌨️'],
+            'printemps' => ['🌸', '🌷', '🦋'],
+            'ete' => ['🌞', '🍦', '🏄'],
+            'automne' => ['🍁', '🍂', '🍄'],
+            'halloween' => ['🎃', '🕸️', '👻'],
+            'noel' => ['🎄', '🎅', '🤶'],
+            'carnaval' => ['🎭', '🎊', '🤹'],
+            'saint_patrick' => ['☘️', '🍺', '🇮🇪'],
+            'hanoucca' => ['🕎', '✨', '🥯'],
+            'ramadan' => ['🌙', '🕌', '🕋'],
+            'diwali' => ['🪔', '🎆', '🌟'],
+            'chinese_new_year' => ['🐉', '🏮', '🧧'],
+            'fete_meres' => ['💐', '👩‍👧‍👦', '🌹'],
+            'fete_peres' => ['👔', '🍻', '🎣'],
+            'halloween' => ['🎃', '🦇', '🕸️'],
+            'action_de_grace' => ['🦃', '🥧', '🍂'],
+            'noel' => ['🎄', '🎁', '❄️'],
+            'nouvel_an_chinois' => ['🐲', '🧨', '🧧'],
+            'fete_saucisse' => ['🌭', '🍻', '🎉', '🕺', '🎶'],
+            'apero_time' => ['🍺', '🍹', '🍾']
+        ];
     }
 
-    public function getSnowflakeChar(): string
+    public function getSelectedSeason(): string
     {
-        return $this->snowflakeConfig->getSnowflakeChar();
+        return $this->scopeConfig->getValue('snowflake/general/season', ScopeInterface::SCOPE_STORE);
+    }
+
+    public function getIconsForSelectedSeason(): string
+    {
+        $selectedSeason = $this->getSelectedSeason();
+        $seasonalIcons = $this->getSeasonalIcons();
+        $icons = $seasonalIcons[$selectedSeason] ?? [];
+        return $this->serializer->serialize($icons);
     }
 
     public function getSnowflakeVSpeed(): float

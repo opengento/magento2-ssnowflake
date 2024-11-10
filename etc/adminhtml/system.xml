@@ -19,10 +19,10 @@
                     <config_path>snowflake/general/enable</config_path>
                     <source_model>Magento\Config\Model\Config\Source\Enabledisable</source_model>
                 </field>
-                <field id="icon" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Icon</label>
-                    <comment><![CDATA[Icon to display as a snowflake ❄️, get <a href="https://emojipedia.org/" target="_blank">more emoji</a>.]]></comment>
-                    <backend_model>Opengento\Snowflake\Model\Config\Backend\EmojiConverter</backend_model>
+                <field id="season" translate="label" type="select" sortOrder="15" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Season/Festival</label>
+                    <source_model>Opengento\Snowflake\Model\Config\Source\Season</source_model>
+                    <comment><![CDATA[Choose a season or festival for the icons.]]></comment>
                     <depends>
                         <field id="snowflake/general/enable">1</field>
                     </depends>
